@@ -160,7 +160,7 @@ init python in lintools_text:
                 elif name in INLINE_STYLES:
                     active.append(value)
                 else:
-                    raise ValueError("LinTools: tag %r is not supported inside ltshatter/ltrepel. "
+                    raise ValueError("LinTools: tag %r is not supported inside interactive effects. "
                         "Use font/size/color/b/i tags inside, or style=your_style." % name)
             else:
                 raise ValueError("LinTools: images/displayables cannot be nested in interactive text.")

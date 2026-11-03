@@ -5,7 +5,8 @@ define lintools_demo_cards = (
     ("01 / 彩虹", "{ltrainbow}今天也要闪闪发光。{/ltrainbow}"),
     ("02 / 组合", "{ltfx=wave:amplitude=7;speed=1|rainbow:speed=0.3}波浪与彩虹，一起流动。{/ltfx}"),
     ("03 / 躲开鼠标", "{ltrepel=radius=110;distance=18}{size=42}别靠这么近，我会躲开的。{/size}{/ltrepel}"),
-    ("04 / 破碎", "{ltshatter=hold=0;pieces=4;distance=28;gravity=180;duration=1.2;auto=0}{size=42}短暂一颤，文字随即崩开四散下坠。{/size}{/ltshatter}"),
+    ("04 / 交互水波", "{ltwater=strength=0.8;speed=260;damping=1.2;distance=48}{size=42}{color=#a7e4ee}静水无声，指尖掠过，涟漪向两岸散去。{/color}{/size}{/ltwater}"),
+    ("05 / 破碎", "{ltshatter=hold=0;pieces=4;distance=28;gravity=180;duration=1.2;auto=0}{size=42}短暂一颤，文字随即崩开四散下坠。{/size}{/ltshatter}"),
 )
 
 screen lintools_demo_gallery():
@@ -38,16 +39,21 @@ screen lintools_demo_gallery():
                                 fixed:
                                     ysize 42
                                     text title size 29 color "#75dccb" yalign 0.5
-                                    if title == "04 / 破碎":
+                                    if title == "05 / 破碎":
                                         textbutton "重播":
                                             xalign 1.0
                                             yalign 0.5
                                             text_size 25
                                             action Function(shatter_preview.replay)
-                                if title == "04 / 破碎":
+                                if title == "05 / 破碎":
                                     fixed:
                                         ysize 200
                                         add shatter_preview
+                                elif title == "04 / 交互水波":
+                                    text "上下划过文字，轻触微漾，快速穿过激起波浪。" size 22 color "#8ea7ae"
+                                    fixed:
+                                        ysize 200
+                                        text sample size 42 color "#ffffff" slow_cps 0 yalign 0.5
                                 else:
                                     text sample size 42 color "#ffffff" slow_cps 0 yminimum 76:
                                         outlines [(1, "#080e16", 0, 0)]
@@ -118,6 +124,7 @@ label lintools_demo_interactive:
     e "{ltshatter=hold=0;stagger=0.2;duration=1.2;pieces=4;distance=28;gravity=180}{size=40}那些未曾说出口的话，终于碎在了风里。{/size}{/ltshatter}"
     e "风停了。"
     e "{ltrepel=radius=110;distance=18;response=12}{size=40}别靠这么近，我会躲开的。{/size}{/ltrepel}"
+    e "{ltwater}{size=40}{color=#a7e4ee}上下划过这片文字，波纹会从指尖向两边散开。{/color}{/size}{/ltwater}"
     menu:
         "演示结束，接下来……"
         "回到特效总览":

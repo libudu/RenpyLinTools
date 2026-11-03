@@ -89,7 +89,7 @@ init -10 python in lintools_text:
         for kind, value in contents:
             if kind == renpy.TEXT_TAG:
                 nested = value.partition("=")[0]
-                if nested in TAGS or nested in ("ltfx", "shader", "ltshatter", "ltrepel", "ltcurtain"):
+                if nested in TAGS or nested in ("ltfx", "shader", "ltshatter", "ltrepel", "ltcurtain", "ltwater"):
                     raise ValueError("LinTools: use {ltfx=wave|rainbow} for combined effects, "
                         "rather than nesting effect/shader tags.")
         return [(renpy.TEXT_TAG, "shader=" + shader)] + list(contents) + [
