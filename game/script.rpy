@@ -48,6 +48,13 @@ init 2 python:
 
         def hover_control(self, hovered):
             self.control_hovered = hovered
+            # Update the live viewport without rebuilding the gallery on hover.
+            # Repeated layout can shift text at fractional window scales.
+            viewport = renpy.get_displayable("lintools_demo_gallery", "gallery_viewport")
+            if viewport is not None:
+                viewport.draggable = not hovered
+                if hovered:
+                    viewport.drag_position = None
             if hovered:
                 self.release()
 
@@ -141,6 +148,7 @@ screen lintools_demo_gallery():
         yfill True
         padding (100, 60, 100, 60)
         viewport:
+            id "gallery_viewport"
             yfill True
             mousewheel True
             # Viewport records a drag before dispatching to its buttons.
@@ -162,28 +170,29 @@ screen lintools_demo_gallery():
                                 text title size 32 color "#75dccb" yalign 0.5
                                 if title == "05 / 破碎":
                                     textbutton "重播":
-                                        hovered Function(rope_preview.hover_control, True)
-                                        unhovered Function(rope_preview.hover_control, False)
+                                        hovered Function(rope_preview.hover_control, True, _update_screens=False)
+                                        unhovered Function(rope_preview.hover_control, False, _update_screens=False)
                                         xalign 1.0
                                         yalign 0.5
                                         text_size 28
-                                        action Function(shatter_preview.replay)
+                                        # Replay redraws its own displayable; keep the gallery layout.
+                                        action Function(shatter_preview.replay, _update_screens=False)
                                 elif title == "06 / 弹力绳":
                                     textbutton "复位":
-                                        hovered Function(rope_preview.hover_control, True)
-                                        unhovered Function(rope_preview.hover_control, False)
+                                        hovered Function(rope_preview.hover_control, True, _update_screens=False)
+                                        unhovered Function(rope_preview.hover_control, False, _update_screens=False)
                                         xalign 1.0
                                         yalign 0.5
                                         text_size 28
-                                        action Function(rope_preview.reset)
+                                        action Function(rope_preview.reset, _update_screens=False)
                                 elif title == "07 / 帘幕":
                                     textbutton "复位":
-                                        hovered Function(rope_preview.hover_control, True)
-                                        unhovered Function(rope_preview.hover_control, False)
+                                        hovered Function(rope_preview.hover_control, True, _update_screens=False)
+                                        unhovered Function(rope_preview.hover_control, False, _update_screens=False)
                                         xalign 1.0
                                         yalign 0.5
                                         text_size 28
-                                        action Function(curtain_preview.reset)
+                                        action Function(curtain_preview.reset, _update_screens=False)
                             # Flatten each padded effect area before the
                             # viewport recursively crops its moving glyphs.
                             if title == "05 / 破碎":
