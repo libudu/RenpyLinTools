@@ -36,9 +36,19 @@ e "{size=44}{b}{ltwave=5}原生字号与粗体{/ltwave}{/b}{/size}"
 - `{size}`、`{b}`、`{i}`、`{color}` 可与效果标签嵌套。彩虹接管正文颜色，保留描边/阴影颜色；外层 `{color}` 不会给彩虹再染色。
 - 使用引擎的字体、换行和逐字显示逻辑，不拆字为独立 Displayable。动画在文字显示完后持续运行。
 - 位移动画不参与布局，请给大幅度效果留足行距和边缘空间，如 `what_line_spacing=16`。标签不会自动扩展文本框。
+- 首行向上运动的空间需要在外层容器中预留；仅增加 `yminimum` 或 `line_spacing` 不能保证顶部留白。总览为普通效果预留四周 24 像素、水波上下各 56 像素，破碎另留顶部和下坠空间。在 viewport 内还需给带留白的容器加 `Transform(mesh=True)`，先将整个效果区绘制到纹理，避免滚动裁切递归进入逐字渲染、截掉负向位移。嵌入其他项目时可参考下面的写法；滚动到 viewport 边界之外的内容仍会正常裁切。
 - `{w}`、`{p}`、`{nw}`、`{fast}` 建议放在特效标签外，分段使用效果标签。
 - 可用于 screen 的 `text`、按钮和角色姓名，不局限于对白。字号与字体来自宿主项目。
 - 动画使用渲染时钟，读档或回滚后不保证恢复到同一动画相位。历史记录是否保留效果由宿主项目的 history screen 决定。
+
+```renpy
+# distance=48，预留额外余量；padding 会把文字实际向内放置。
+frame:
+    at Transform(mesh=True)
+    background None
+    padding (0, 56)
+    text "{ltwater=distance=48}{size=42}向上泛起的波纹也有空间。{/size}{/ltwater}"
+```
 
 ## 接入细节
 

@@ -161,23 +161,40 @@ screen lintools_demo_gallery():
                                             yalign 0.5
                                             text_size 25
                                             action Function(rope_preview.reset)
+                                # Flatten each padded effect area before the
+                                # viewport recursively crops its moving glyphs.
                                 if title == "05 / 破碎":
-                                    fixed:
-                                        ysize 200
+                                    # Reserve space inside the viewport, including
+                                    # upward kicks and the shards' downward flight.
+                                    frame:
+                                        at Transform(mesh=True)
+                                        background None
+                                        xfill True
+                                        padding (96, 48, 96, 240)
                                         add shatter_preview
                                 elif title == "04 / 交互水波":
                                     text "上下划过文字，轻触微漾，快速穿过激起波浪。" size 22 color "#8ea7ae"
-                                    fixed:
-                                        ysize 200
-                                        text sample size 42 color "#ffffff" slow_cps 0 yalign 0.5
+                                    frame:
+                                        at Transform(mesh=True)
+                                        background None
+                                        xfill True
+                                        padding (0, 56)
+                                        text sample size 42 color "#ffffff" slow_cps 0
                                 elif title == "06 / 弹力绳":
                                     text "首尾固定，拖动中间的字，松开后回弹晃动。" size 22 color "#8ea7ae"
                                     fixed:
                                         ysize 240
                                         add rope_preview.slot yalign 0.5
                                 else:
-                                    text sample size 42 color "#ffffff" slow_cps 0 yminimum 76:
-                                        outlines [(1, "#080e16", 0, 0)]
+                                    # A minimum height only adds space below the
+                                    # text. Padding also protects upward motion.
+                                    frame:
+                                        at Transform(mesh=True)
+                                        background None
+                                        xfill True
+                                        padding (24, 24)
+                                        text sample size 42 color "#ffffff" slow_cps 0:
+                                            outlines [(1, "#080e16", 0, 0)]
                                 text sample.replace("{", "{{") substitute False size 20 color "#b5c9dc"
             hbox:
                 spacing 36
