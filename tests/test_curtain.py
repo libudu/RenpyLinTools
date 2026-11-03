@@ -142,6 +142,45 @@ class CurtainTests(unittest.TestCase):
         self.stroke(curtain, (20, 130), (300, 130))
         self.assertEqual(set(curtain.active_chains), {0, 1, 2})
 
+    def test_high_rate_mouse_motion_does_not_add_active_redraws(self):
+        curtain = self.cls("甲乙丙\n丁戊己")
+        self.stroke(curtain, (20, 130), (300, 130))
+        self.ns["renpy"].redraw.assert_called_once_with(curtain, 0)
+        curtain.render(800, 600, 0.02, 0.02)
+        self.ns["renpy"].redraw.assert_called_with(curtain, 1.0/60.0)
+        self.ns["renpy"].redraw.reset_mock()
+        curtain.impulse = Mock(wraps=curtain.impulse)
+        for i in range(20):
+            curtain.event(self.motion, 300-i*14, 130, 0.021+i*0.001)
+        self.assertTrue(curtain.impulse.called)
+        self.ns["renpy"].redraw.assert_not_called()
+
+    def test_chain_bounds_reject_unrelated_columns_before_segment_scan(self):
+        curtain = self.cls("甲乙丙\n丁戊己")
+        anchor, nodes, links, bends, spans = curtain.chains[2]
+        # Any attempt to iterate this distant column would raise TypeError.
+        curtain.chains[2] = (anchor, None, links, bends, spans)
+        self.stroke(curtain, (80, 130), (145, 130))
+        self.assertEqual(set(curtain.active_chains), {0})
+
+    def test_bounds_follow_motion_and_reset_without_changing_contact(self):
+        curtain = self.cls("甲\n乙\n丙")
+        self.stroke(curtain, (70, 160), (150, 160))
+        original_bounds = curtain.chain_bounds[0]
+        for _ in range(20):
+            curtain.simulate()
+        self.assertIsNone(curtain.chain_bounds[0])
+        node = curtain.chains[0][1][12]
+        curtain.impulse = Mock(wraps=curtain.impulse)
+        self.stroke(curtain, (node[0]-5, node[1]), (node[0]+5, node[1]), st=1)
+        self.assertTrue(curtain.impulse.called)
+        bounds = curtain.chain_bounds[0]
+        points = [curtain.chains[0][0]] + curtain.chains[0][1]
+        self.assertEqual(bounds, (min(n[0] for n in points), min(n[1] for n in points),
+            max(n[0] for n in points), max(n[1] for n in points)))
+        curtain.reset()
+        self.assertEqual(curtain.chain_bounds[0], original_bounds)
+
     def test_unrelated_mouse_motion_and_disabled_strength_stay_idle(self):
         for curtain, a, b in ((self.cls("甲乙"), (0, 0), (40, 0)),
                 (self.cls("甲乙", strength=0), (20, 110), (300, 110))):

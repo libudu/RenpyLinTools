@@ -2,6 +2,7 @@
 define e = Character("LinTools", color="#75dccb", what_size=40, what_line_spacing=16)
 
 define lintools_demo_rope_source = "两端固定，拖动中间的字拉起弹力绳。"
+define lintools_demo_curtain_source = "　　风拂过这一帘文字　　\n　山色入帘青意满窗　　\n春光落在每一根细绳上　\n　轻轻拨动便泛起涟漪　\n字与字相连随风摇曳　　\n　时光从指尖缓缓流过　\n人间有味是清欢　　　\n　　等风停也等你归来　"
 
 define lintools_demo_cards = (
     ("01 / 彩虹", "{ltrainbow}今天也要闪闪发光。{/ltrainbow}"),
@@ -10,6 +11,7 @@ define lintools_demo_cards = (
     ("04 / 交互水波", "{ltwater=strength=0.8;speed=260;damping=1.2;distance=48}{size=42}{color=#a7e4ee}静水无声，指尖掠过，涟漪向两岸散去。{/color}{/size}{/ltwater}"),
     ("05 / 破碎", "{ltshatter=hold=0;pieces=4;distance=28;gravity=180;duration=1.2;auto=0}{size=42}短暂一颤，文字随即崩开四散下坠。{/size}{/ltshatter}"),
     ("06 / 弹力绳", "{ltrope=size=42;stiffness=18;coupling=380;damping=2.8}" + lintools_demo_rope_source + "{/ltrope}"),
+    ("07 / 帘幕", "{ltcurtain=cell=64;size=42;subdivisions=8}" + lintools_demo_curtain_source + "{/ltcurtain}"),
 )
 
 init 2 python:
@@ -117,6 +119,7 @@ init 2 python:
 screen lintools_demo_gallery():
     default shatter_preview = lintools_text.ReplayableShatterText(lintools_demo_cards[4][1], size=42, color="#ffffff")
     default rope_preview = LinToolsGalleryRope(lintools_demo_rope_source)
+    default curtain_preview = lintools_text.CurtainText(lintools_demo_curtain_source, subdivisions=8)
     default gallery_scroll = ui.adjustment(changed=rope_preview.scrolled)
     on "show" action Show("lintools_rope", rope=rope_preview)
     on "hide" action Hide("lintools_rope")
@@ -161,6 +164,12 @@ screen lintools_demo_gallery():
                                             yalign 0.5
                                             text_size 25
                                             action Function(rope_preview.reset)
+                                    elif title == "07 / 帘幕":
+                                        textbutton "复位":
+                                            xalign 1.0
+                                            yalign 0.5
+                                            text_size 25
+                                            action Function(curtain_preview.reset)
                                 # Flatten each padded effect area before the
                                 # viewport recursively crops its moving glyphs.
                                 if title == "05 / 破碎":
@@ -185,6 +194,14 @@ screen lintools_demo_gallery():
                                     fixed:
                                         ysize 240
                                         add rope_preview.slot yalign 0.5
+                                elif title == "07 / 帘幕":
+                                    text "划过细绳拨动文字，静止后逐渐停下。" size 22 color "#8ea7ae"
+                                    frame:
+                                        at Transform(mesh=True)
+                                        background None
+                                        xfill True
+                                        padding (0, 0)
+                                        add curtain_preview xalign 0.5 zoom 0.75
                                 else:
                                     # A minimum height only adds space below the
                                     # text. Padding also protects upward motion.
@@ -195,59 +212,20 @@ screen lintools_demo_gallery():
                                         padding (24, 24)
                                         text sample size 42 color "#ffffff" slow_cps 0:
                                             outlines [(1, "#080e16", 0, 0)]
-                                text sample.replace("{", "{{") substitute False size 20 color "#b5c9dc"
+                                text sample.replace("\n", "\\n").replace("{", "{{") substitute False size 20 color "#b5c9dc"
             hbox:
                 spacing 36
                 textbutton "逐句演示 →" action Return("dialogue") text_size 29
                 textbutton "破碎 / 鼠标演示" action Return("interactive") text_size 29
-                textbutton "帘幕 →" action Return("curtain") text_size 29
                 textbutton "返回主菜单" action MainMenu(confirm=False) text_size 29
 
 label start:
     scene expression Solid("#101823")
     window hide
     call screen lintools_demo_gallery
-    if _return == "curtain":
-        jump lintools_demo_curtain
     if _return == "interactive":
         jump lintools_demo_interactive
     jump lintools_demo_dialogue
-
-define lintools_demo_curtain_source = "　　风拂过这一帘文字　　\n　山色入帘青意满窗　　\n春光落在每一根细绳上　\n　轻轻拨动便泛起涟漪　\n字与字相连随风摇曳　　\n　时光从指尖缓缓流过　\n人间有味是清欢　　　\n　　等风停也等你归来　"
-
-screen lintools_demo_curtain_window():
-    default curtain = lintools_text.CurtainText(
-        lintools_demo_curtain_source, subdivisions=8)
-    modal True
-    add Solid("#101823")
-    frame:
-        background None
-        xfill True
-        yfill True
-        padding (70, 36)
-        vbox:
-            spacing 18
-            fixed:
-                ysize 64
-                text "LinTools / 帘幕" size 52 color "#eff7ff" yalign 0.5
-                hbox:
-                    xalign 1.0
-                    yalign 0.5
-                    spacing 36
-                    textbutton "复位" action Function(curtain.reset) text_size 28
-                    textbutton "返回总览" action Return() text_size 28
-            frame:
-                background Solid("#172630")
-                xfill True
-                ysize 700
-                add curtain xalign 0.5 yalign 0.5
-            text lintools_demo_curtain_source size 18 color "#8ea7ae" substitute False
-    key "game_menu" action Return()
-
-label lintools_demo_curtain:
-    window hide
-    call screen lintools_demo_curtain_window
-    jump start
 
 label lintools_demo_dialogue:
     scene expression Solid("#101823")

@@ -142,7 +142,7 @@ text "{ltwater=strength=0.8;speed=260;damping=1.2;radius=44;distance=48}{size=42
 
 ## 帘幕：细绳串字与鼠标拨动
 
-总览底部点击“帘幕 →”打开独立展示界面，绳线统一使用 GPU 绘制。“复位”使所有绳子与文字回到初始位置，返回总览或按 Esc 退出该界面。
+帘幕直接显示在总览的“07 / 帘幕”卡片中，绳线统一使用 GPU 绘制。鼠标划过即可拨动，标题右侧的“复位”使所有绳子与文字回到初始位置。
 
 文字逐格排布，每个字符占一个正方形格子。推荐使用全角文字和全角空格 `　` 保持原文对齐。每一列是一条独立细绳：顶部连续空白跳过，从该列第一个非空字符上方固定，往下串联到最后一个非空字符；中间空格保留绳段，不显示字。整列为空时不生成细绳。不支持制表符。
 
@@ -152,13 +152,15 @@ text "{ltwater=strength=0.8;speed=260;damping=1.2;radius=44;distance=48}{size=42
 
 只有被鼠标拨动的列参与物理更新；绳子连续半秒处于低速状态后自动休眠，再次划过即可唤醒。全部休眠时不持续请求重绘。“复位”也会立即休眠所有列。节点使用普通 Python 列表存储瞬时动画坐标，避免 Ren'Py 可回滚列表在高频读写中的开销；字形旋转对象会复用，绳线按整列批量绘制。
 
+运动中沿用 60 Hz 重绘计划，高回报率鼠标不会逐事件额外触发立即重绘。鼠标检测先用整列包围盒排除远处绳子；包围盒在物理更新后按需重算并缓存，精确检测找到轨迹交点后立即结束该列搜索，减少多字符同时运动时的交互开销。
+
 推荐在 screen 中使用独立 Displayable，避免把大块多行内容塞进对白框：
 
 ```renpy
 screen my_curtain():
     default curtain = lintools_text.CurtainText(
         "　春风又绿\n江南山水间\n　等你归来", cell=64, size=42,
-        strength=0.65, subdivisions=8)
+        strength=0.78, subdivisions=8)
     add curtain align (0.5, 0.5)
     textbutton "复位" action Function(curtain.reset)
 ```
@@ -166,7 +168,7 @@ screen my_curtain():
 也自动注册了 `{ltcurtain}` 标签，适合 screen 的 text：
 
 ```renpy
-text "{ltcurtain=cell=64;size=42;strength=0.65;subdivisions=8}　春风又绿\n江南山水间\n　等你归来{/ltcurtain}"
+text "{ltcurtain=cell=64;size=42;strength=0.78;subdivisions=8}　春风又绿\n江南山水间\n　等你归来{/ltcurtain}"
 ```
 
 | 参数 | 默认值 | 含义 |
@@ -174,9 +176,9 @@ text "{ltcurtain=cell=64;size=42;strength=0.65;subdivisions=8}　春风又绿\n�
 | `cell` | 64 | 方格边长，24–160 像素 |
 | `subdivisions` | 8 | 每格的实际物理绳段数，整数 2–16；顶部半格使用向上取整的一半段数。越大越细腻，计算开销也随节点数增加；一般使用 8，大量长绳可降至 4–6 |
 | `size` | 42 | 字号，12–120 |
-| `strength` | 0.65 | 鼠标拨动力度，0–3，0 为禁用拨动 |
+| `strength` | 0.78 | 鼠标拨动力度，0–3，0 为禁用拨动 |
 | `damping` | 2 | 阻尼，0.1–12，越大越快停下 |
-| `radius` | 20 | 鼠标与绳子的接触范围，1–100 像素 |
+| `radius` | 24 | 鼠标与绳子的接触范围，1–100 像素 |
 | `gravity` | 1100 | 重力，100–4000 像素/秒² |
 | `margin` | 80 | 四周预留摆动空间，20–240 像素 |
 | `style` | default | 内部字形的文字样式 |

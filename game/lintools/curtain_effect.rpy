@@ -8,9 +8,9 @@ init 1 python in lintools_text:
     CURTAIN = {
         "cell": (None, 64.0, 24.0, 160.0),
         "size": (None, 42.0, 12.0, 120.0),
-        "strength": (None, 0.65, 0.0, 3.0),
+        "strength": (None, 0.78, 0.0, 3.0),
         "damping": (None, 2.0, 0.1, 12.0),
-        "radius": (None, 20.0, 1.0, 100.0),
+        "radius": (None, 24.0, 1.0, 100.0),
         "gravity": (None, 1100.0, 100.0, 4000.0),
         "margin": (None, 80.0, 20.0, 240.0),
         "subdivisions": (None, 8.0, 2.0, 16.0),
@@ -73,8 +73,8 @@ init 1 python in lintools_text:
         SLEEP_STEPS = 60
         SLEEP_DISTANCE2 = 0.015 ** 2
 
-        def __init__(self, text, cell=64, size=42, strength=0.65, damping=2,
-                radius=20, gravity=1100, margin=80, style="default",
+        def __init__(self, text, cell=64, size=42, strength=0.78, damping=2,
+                radius=24, gravity=1100, margin=80, style="default",
                 color="#e8eee9", rope_color="#718b88", subdivisions=8, **properties):
             super(CurtainText, self).__init__(**properties)
             raw_options = dict(cell=cell, size=size, strength=strength,
@@ -94,6 +94,7 @@ init 1 python in lintools_text:
                 raise ValueError("LinTools ltcurtain: use fullwidth spaces instead of tabs.")
             self.rope_color = rope_color
             self.chains = []
+            self.chain_bounds = _curtain_list()
             self.solvers = []
             self.glyphs = []
             self.rope_models = []
@@ -152,6 +153,7 @@ init 1 python in lintools_text:
                             spans.append((a, b, b[7]-a[7]))
                     stride *= 2
                 self.chains.append((anchor, nodes, links, bends, spans))
+                self.chain_bounds.append((x, anchor_y, x, nodes[-1][1]))
                 for start in range(0, len(points)-1, CURTAIN_ROPE_POINTS-3):
                     end = min(start+CURTAIN_ROPE_POINTS-3, len(points)-1)
                     first = max(0, start-1)
@@ -190,12 +192,13 @@ init 1 python in lintools_text:
             renpy.redraw(self, 0)
 
         def reset(self):
-            for anchor, nodes, links, bends, spans in self.chains:
+            for index, (anchor, nodes, links, bends, spans) in enumerate(self.chains):
                 y = anchor[1]
                 for node in nodes:
                     y += node[4]
                     node[0] = node[2] = anchor[0]
                     node[1] = node[3] = y
+                self.chain_bounds[index] = (anchor[0], anchor[1], anchor[0], y)
             self.last_st = None
             self.accumulator = 0.0
             self.pointer = None
@@ -233,6 +236,7 @@ init 1 python in lintools_text:
             gravity = self.options["gravity"] * dt * dt
             solve = self.solve_constraints
             for index in tuple(self.active_chains):
+                self.chain_bounds[index] = None
                 anchor, nodes, links, bends, spans = self.chains[index]
                 for node in nodes:
                     x, y, old_x, old_y = node[0], node[1], node[2], node[3]
@@ -328,18 +332,32 @@ init 1 python in lintools_text:
             was_active = bool(self.active_chains)
             changed = False
             for index, (anchor, nodes, links, bends, spans) in enumerate(self.chains):
+                bounds = self.chain_bounds[index]
+                if bounds is None:
+                    # Positions only change during simulation. Cache one broad
+                    # phase box between steps, even with a high-rate mouse.
+                    xs = [anchor[0]] + [node[0] for node in nodes]
+                    ys = [anchor[1]] + [node[1] for node in nodes]
+                    bounds = (min(xs), min(ys), max(xs), max(ys))
+                    self.chain_bounds[index] = bounds
+                if bounds[2] < left or bounds[0] > right or bounds[3] < top or bounds[1] > bottom:
+                    continue
                 best = None
                 previous = anchor
                 for i, node in enumerate(nodes):
                     # Most segments cannot touch this mouse stroke. Reject
                     # their bounding boxes before the exact swept test.
-                    if (max(previous[0], node[0]) < left or min(previous[0], node[0]) > right
-                            or max(previous[1], node[1]) < top or min(previous[1], node[1]) > bottom):
+                    if ((previous[0] < left and node[0] < left)
+                            or (previous[0] > right and node[0] > right)
+                            or (previous[1] < top and node[1] < top)
+                            or (previous[1] > bottom and node[1] > bottom)):
                         previous = node
                         continue
                     distance, t = swept_rope_distance(old_pointer[:2], (x, y), previous, node)
                     if best is None or distance < best[0]:
                         best = (distance, t, i)
+                    if distance == 0.0:
+                        break
                     previous = node
                 if best is None or best[0] >= radius:
                     continue
@@ -360,7 +378,8 @@ init 1 python in lintools_text:
                 if not was_active:
                     self.last_st = st
                     self.accumulator = 0.0
-                renpy.redraw(self, 0)
+                    # Preserve the active curtain's existing 60 Hz redraw schedule.
+                    renpy.redraw(self, 0)
             return None
 
     def curtain_tag(tag, argument, contents):
