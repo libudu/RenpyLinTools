@@ -105,7 +105,7 @@ class WaterTests(unittest.TestCase):
             surface.advance(frame/60)
         self.assertTrue(all(g.offset == g.velocity == 0 for g in surface.glyphs[4:]))
 
-    def test_decay_returns_exactly_to_rest_and_stops_scheduling(self):
+    def test_decay_returns_exactly_to_rest_and_stops_physics_scheduling(self):
         surface = self.surface()
         surface.glyphs[7].velocity = 600
         surface.active = True
@@ -117,6 +117,44 @@ class WaterTests(unittest.TestCase):
         self.ns["renpy"].redraw.reset_mock()
         surface.advance(41)
         self.ns["renpy"].redraw.assert_not_called()
+
+    def test_idle_render_keeps_mouse_input_alive_without_starting_physics(self):
+        surface = self.surface(1)
+        glyph = surface.glyphs[0]
+        renpy = self.ns["renpy"]
+        renpy.render = Mock(return_value=SimpleNamespace(get_size=lambda: (40, 40)))
+        renpy.Render = Mock(return_value=SimpleNamespace(subpixel_blit=Mock()))
+        for st in (0, 1, 10):
+            glyph.render(800, 600, st, st)
+            renpy.redraw.assert_called_with(glyph, 1 / 60)
+        self.assertFalse(surface.active)
+        self.assertEqual((glyph.offset, glyph.velocity), (0, 0))
+        self.motion(surface, 20, -100, 10)
+        self.motion(surface, 20, 100, 10.02)
+        glyph.render(800, 600, 10.02, 10.02)
+        glyph.render(800, 600, 10.04, 10.04)
+        self.assertTrue(surface.active)
+        self.assertGreater(glyph.offset, 0)
+
+    def test_settled_water_keeps_listening_and_can_be_disturbed_again(self):
+        surface = self.surface(1)
+        glyph = surface.glyphs[0]
+        renpy = self.ns["renpy"]
+        renpy.render = Mock(return_value=SimpleNamespace(get_size=lambda: (40, 40)))
+        renpy.Render = Mock(return_value=SimpleNamespace(subpixel_blit=Mock()))
+        self.motion(surface, 20, -100, 0)
+        self.motion(surface, 20, 100, 0.02)
+        for frame in range(2401):
+            glyph.render(800, 600, frame / 60, frame / 60)
+        self.assertFalse(surface.active)
+        self.assertEqual((glyph.offset, glyph.velocity), (0, 0))
+        renpy.redraw.assert_called_with(glyph, 1 / 60)
+        self.motion(surface, 20, 100, 41)
+        self.motion(surface, 20, -100, 41.02)
+        glyph.render(800, 600, 41.02, 41.02)
+        glyph.render(800, 600, 41.04, 41.04)
+        self.assertTrue(surface.active)
+        self.assertLess(glyph.offset, 0)
 
     def test_fixed_step_and_shared_clock_are_independent_of_render_order(self):
         results = []

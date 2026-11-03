@@ -348,9 +348,12 @@ init python in lintools_text:
             ox, oy = self.offset
             self.offset = (ox + (tx-ox)*blend, oy + (ty-oy)*blend)
             result = renpy.Render(w, h)
-            result.blit(child, self.offset)
-            if abs(tx-self.offset[0]) + abs(ty-self.offset[1]) > 0.02:
-                renpy.redraw(self, 0)
+            result.subpixel_blit(child, self.offset)
+            # Text.event() requires a live layout, even for embedded glyphs.
+            # Other animated Texts can evict an idle parent's layout cache,
+            # cutting off the very mouse events that would wake this effect.
+            # Keep the parent rendered while waiting for pointer movement too.
+            renpy.redraw(self, 1.0 / 60.0)
             return result
 
         def event(self, ev, x, y, st):

@@ -161,6 +161,11 @@ init 1 python in lintools_text:
             result.subpixel_blit(child, (0.0, self.offset))
             if self.surface.active:
                 renpy.redraw(self, 0)
+            else:
+                # Keep Text's layout cached while resting, so Text.event()
+                # still forwards the mouse strokes that wake the water.
+                # Physics remains asleep until a stroke applies an impulse.
+                renpy.redraw(self, 1.0 / 60.0)
             return result
 
         def event(self, ev, x, y, st):

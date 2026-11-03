@@ -7,11 +7,11 @@ define lintools_demo_curtain_source = "　　风拂过这一帘文字　　\n　
 define lintools_demo_cards = (
     ("01 / 彩虹", "{ltrainbow}今天也要闪闪发光。{/ltrainbow}"),
     ("02 / 组合", "{ltfx=wave:amplitude=7;speed=1|rainbow:speed=0.3}波浪与彩虹，一起流动。{/ltfx}"),
-    ("03 / 躲开鼠标", "{ltrepel=radius=110;distance=18}{size=42}别靠这么近，我会躲开的。{/size}{/ltrepel}"),
-    ("04 / 交互水波", "{ltwater=strength=0.8;speed=260;damping=1.2;distance=48}{size=42}{color=#a7e4ee}静水无声，指尖掠过，涟漪向两岸散去。{/color}{/size}{/ltwater}"),
-    ("05 / 破碎", "{ltshatter=hold=0;pieces=4;distance=28;gravity=180;duration=1.2;auto=0}{size=42}短暂一颤，文字随即崩开四散下坠。{/size}{/ltshatter}"),
-    ("06 / 弹力绳", "{ltrope=size=42;stiffness=18;coupling=380;damping=2.8}" + lintools_demo_rope_source + "{/ltrope}"),
-    ("07 / 帘幕", "{ltcurtain=cell=64;size=42;subdivisions=8}" + lintools_demo_curtain_source + "{/ltcurtain}"),
+    ("03 / 躲开鼠标", "{ltrepel=radius=110;distance=18}{size=48}别靠这么近，我会躲开的。{/size}{/ltrepel}"),
+    ("04 / 交互水波", "{ltwater=strength=0.8;speed=260;damping=1.2;distance=48}{size=48}{color=#a7e4ee}静水无声，指尖掠过，涟漪向两岸散去。{/color}{/size}{/ltwater}"),
+    ("05 / 破碎", "{ltshatter=hold=0;pieces=4;distance=28;gravity=180;duration=1.2;auto=0}{size=48}短暂一颤，文字随即崩开四散下坠。{/size}{/ltshatter}"),
+    ("06 / 弹力绳", "{ltrope=size=48;stiffness=18;coupling=380;damping=2.8}" + lintools_demo_rope_source + "{/ltrope}"),
+    ("07 / 帘幕", "{ltcurtain=cell=64;size=48;subdivisions=8}" + lintools_demo_curtain_source + "{/ltcurtain}"),
 )
 
 init 2 python:
@@ -36,14 +36,20 @@ init 2 python:
         """
         def __init__(self, source):
             super(LinToolsGalleryRope, self).__init__()
-            self.rope = lintools_text.ElasticRopeText(source, size=42)
+            self.rope = lintools_text.ElasticRopeText(source, size=48)
             self.slot = LinToolsRopeSlot(self.rope)
+            self.control_hovered = False
 
         def visit(self):
             return [self.rope]
 
         def release(self):
             self.rope.release()
+
+        def hover_control(self, hovered):
+            self.control_hovered = hovered
+            if hovered:
+                self.release()
 
         def reset(self):
             self.rope.reset()
@@ -100,6 +106,10 @@ init 2 python:
             return result
 
         def event(self, ev, x, y, st):
+            # Header buttons take priority even if foreground rope glyphs
+            # have stretched across their position.
+            if self.control_hovered:
+                return None
             location = self.locate()
             if location is None:
                 return None
@@ -117,9 +127,9 @@ init 2 python:
                     renpy.redraw(self, 0)
 
 screen lintools_demo_gallery():
-    default shatter_preview = lintools_text.ReplayableShatterText(lintools_demo_cards[4][1], size=42, color="#ffffff")
+    default shatter_preview = lintools_text.ReplayableShatterText(lintools_demo_cards[4][1], size=48, color="#ffffff")
     default rope_preview = LinToolsGalleryRope(lintools_demo_rope_source)
-    default curtain_preview = lintools_text.CurtainText(lintools_demo_curtain_source, subdivisions=8)
+    default curtain_preview = lintools_text.CurtainText(lintools_demo_curtain_source, size=48, subdivisions=8)
     default gallery_scroll = ui.adjustment(changed=rope_preview.scrolled)
     on "show" action Show("lintools_rope", rope=rope_preview)
     on "hide" action Hide("lintools_rope")
@@ -129,95 +139,94 @@ screen lintools_demo_gallery():
         background None
         xfill True
         yfill True
-        padding (90, 52)
-        vbox:
-            spacing 20
-            text "LinTools / 文字特效" size 54 color "#eff7ff"
-            viewport:
-                ysize 730
-                mousewheel True
-                draggable True
-                scrollbars "vertical"
-                yadjustment gallery_scroll
-                vbox:
-                    spacing 16
-                    xfill True
-                    for title, sample in lintools_demo_cards:
-                        frame:
-                            background Solid("#1b2939")
-                            xfill True
-                            padding (28, 18)
-                            vbox:
-                                spacing 12
-                                fixed:
-                                    ysize 42
-                                    text title size 29 color "#75dccb" yalign 0.5
-                                    if title == "05 / 破碎":
-                                        textbutton "重播":
-                                            xalign 1.0
-                                            yalign 0.5
-                                            text_size 25
-                                            action Function(shatter_preview.replay)
-                                    elif title == "06 / 弹力绳":
-                                        textbutton "复位":
-                                            xalign 1.0
-                                            yalign 0.5
-                                            text_size 25
-                                            action Function(rope_preview.reset)
-                                    elif title == "07 / 帘幕":
-                                        textbutton "复位":
-                                            xalign 1.0
-                                            yalign 0.5
-                                            text_size 25
-                                            action Function(curtain_preview.reset)
-                                # Flatten each padded effect area before the
-                                # viewport recursively crops its moving glyphs.
+        padding (100, 60, 100, 60)
+        viewport:
+            yfill True
+            mousewheel True
+            # Viewport records a drag before dispatching to its buttons.
+            draggable (not rope_preview.control_hovered)
+            scrollbars "vertical"
+            yadjustment gallery_scroll
+            vbox:
+                spacing 16
+                xfill True
+                for title, sample in lintools_demo_cards:
+                    frame:
+                        background Solid("#1b2939")
+                        xfill True
+                        padding (28, 18)
+                        vbox:
+                            spacing 12
+                            fixed:
+                                ysize 48
+                                text title size 32 color "#75dccb" yalign 0.5
                                 if title == "05 / 破碎":
-                                    # Reserve space inside the viewport, including
-                                    # upward kicks and the shards' downward flight.
-                                    frame:
-                                        at Transform(mesh=True)
-                                        background None
-                                        xfill True
-                                        padding (96, 48, 96, 240)
-                                        add shatter_preview
-                                elif title == "04 / 交互水波":
-                                    text "上下划过文字，轻触微漾，快速穿过激起波浪。" size 22 color "#8ea7ae"
-                                    frame:
-                                        at Transform(mesh=True)
-                                        background None
-                                        xfill True
-                                        padding (0, 56)
-                                        text sample size 42 color "#ffffff" slow_cps 0
+                                    textbutton "重播":
+                                        hovered Function(rope_preview.hover_control, True)
+                                        unhovered Function(rope_preview.hover_control, False)
+                                        xalign 1.0
+                                        yalign 0.5
+                                        text_size 28
+                                        action Function(shatter_preview.replay)
                                 elif title == "06 / 弹力绳":
-                                    text "首尾固定，拖动中间的字，松开后回弹晃动。" size 22 color "#8ea7ae"
-                                    fixed:
-                                        ysize 240
-                                        add rope_preview.slot yalign 0.5
+                                    textbutton "复位":
+                                        hovered Function(rope_preview.hover_control, True)
+                                        unhovered Function(rope_preview.hover_control, False)
+                                        xalign 1.0
+                                        yalign 0.5
+                                        text_size 28
+                                        action Function(rope_preview.reset)
                                 elif title == "07 / 帘幕":
-                                    text "划过细绳拨动文字，静止后逐渐停下。" size 22 color "#8ea7ae"
-                                    frame:
-                                        at Transform(mesh=True)
-                                        background None
-                                        xfill True
-                                        padding (0, 0)
-                                        add curtain_preview xalign 0.5 zoom 0.75
-                                else:
-                                    # A minimum height only adds space below the
-                                    # text. Padding also protects upward motion.
-                                    frame:
-                                        at Transform(mesh=True)
-                                        background None
-                                        xfill True
-                                        padding (24, 24)
-                                        text sample size 42 color "#ffffff" slow_cps 0:
-                                            outlines [(1, "#080e16", 0, 0)]
-                                text sample.replace("\n", "\\n").replace("{", "{{") substitute False size 20 color "#b5c9dc"
-            hbox:
-                spacing 36
-                textbutton "逐句演示 →" action Return("dialogue") text_size 29
-                textbutton "破碎 / 鼠标演示" action Return("interactive") text_size 29
-                textbutton "返回主菜单" action MainMenu(confirm=False) text_size 29
+                                    textbutton "复位":
+                                        hovered Function(rope_preview.hover_control, True)
+                                        unhovered Function(rope_preview.hover_control, False)
+                                        xalign 1.0
+                                        yalign 0.5
+                                        text_size 28
+                                        action Function(curtain_preview.reset)
+                            # Flatten each padded effect area before the
+                            # viewport recursively crops its moving glyphs.
+                            if title == "05 / 破碎":
+                                # Reserve space inside the viewport, including
+                                # upward kicks and the shards' downward flight.
+                                frame:
+                                    at Transform(mesh=True)
+                                    background None
+                                    xfill True
+                                    padding (96, 48, 96, 240)
+                                    add shatter_preview
+                            elif title == "04 / 交互水波":
+                                text "上下划过文字，轻触微漾，快速穿过激起波浪。" size 24 color "#8ea7ae"
+                                frame:
+                                    at Transform(mesh=True)
+                                    background None
+                                    xfill True
+                                    padding (0, 56)
+                                    text sample size 48 color "#ffffff" slow_cps 0
+                            elif title == "06 / 弹力绳":
+                                text "首尾固定，拖动中间的字，松开后回弹晃动。" size 24 color "#8ea7ae"
+                                fixed:
+                                    ysize 240
+                                    add rope_preview.slot yalign 0.5
+                            elif title == "07 / 帘幕":
+                                text "划过细绳拨动文字，静止后逐渐停下。" size 24 color "#8ea7ae"
+                                frame:
+                                    at Transform(mesh=True)
+                                    background None
+                                    xfill True
+                                    padding (0, 0)
+                                    add curtain_preview xalign 0.5 zoom 0.75
+                            else:
+                                # A minimum height only adds space below the
+                                # text. Padding also protects upward motion.
+                                frame:
+                                    at Transform(mesh=True)
+                                    background None
+                                    xfill True
+                                    padding (24, 24)
+                                    text sample size 48 color "#ffffff" slow_cps 0:
+                                        outlines [(1, "#080e16", 0, 0)]
+                            text sample.replace("\n", "\\n").replace("{", "{{") substitute False size 22 color "#b5c9dc"
 
 label start:
     scene expression Solid("#101823")
