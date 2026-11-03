@@ -1,16 +1,125 @@
 # This is only the demo. Copy game/lintools/ to reuse the library.
 define e = Character("LinTools", color="#75dccb", what_size=40, what_line_spacing=16)
 
+define lintools_demo_rope_source = "两端固定，拖动中间的字拉起弹力绳。"
+
 define lintools_demo_cards = (
     ("01 / 彩虹", "{ltrainbow}今天也要闪闪发光。{/ltrainbow}"),
     ("02 / 组合", "{ltfx=wave:amplitude=7;speed=1|rainbow:speed=0.3}波浪与彩虹，一起流动。{/ltfx}"),
     ("03 / 躲开鼠标", "{ltrepel=radius=110;distance=18}{size=42}别靠这么近，我会躲开的。{/size}{/ltrepel}"),
     ("04 / 交互水波", "{ltwater=strength=0.8;speed=260;damping=1.2;distance=48}{size=42}{color=#a7e4ee}静水无声，指尖掠过，涟漪向两岸散去。{/color}{/size}{/ltwater}"),
     ("05 / 破碎", "{ltshatter=hold=0;pieces=4;distance=28;gravity=180;duration=1.2;auto=0}{size=42}短暂一颤，文字随即崩开四散下坠。{/size}{/ltshatter}"),
+    ("06 / 弹力绳", "{ltrope=size=42;stiffness=18;coupling=380;damping=2.8}" + lintools_demo_rope_source + "{/ltrope}"),
 )
 
+init 2 python:
+    class LinToolsRopeSlot(renpy.Displayable):
+        """Reserve the rope's natural size inside the scrolling card."""
+        def __init__(self, rope):
+            super(LinToolsRopeSlot, self).__init__()
+            self.rope = rope
+
+        def visit(self):
+            return [self.rope]
+
+        def render(self, width, height, st, at):
+            child = renpy.render(self.rope, width, height, st, at)
+            return renpy.Render(*child.get_size())
+
+    class LinToolsGalleryRope(renpy.Displayable):
+        """Draw above the gallery, following the slot's actual layout offsets.
+
+        This demo uses ordinary untransformed containers. Walking their placed
+        offsets keeps the foreground aligned without hardcoding card heights.
+        """
+        def __init__(self, source):
+            super(LinToolsGalleryRope, self).__init__()
+            self.rope = lintools_text.ElasticRopeText(source, size=42)
+            self.slot = LinToolsRopeSlot(self.rope)
+
+        def visit(self):
+            return [self.rope]
+
+        def release(self):
+            self.rope.release()
+
+        def reset(self):
+            self.rope.reset()
+            renpy.redraw(self, 0)
+
+        def scrolled(self, value):
+            self.release()
+            renpy.redraw(self, 0)
+
+        def per_interact(self):
+            renpy.redraw(self, 0)
+
+        def locate(self):
+            from renpy.display.viewport import Viewport
+            screen = renpy.get_screen("lintools_demo_gallery")
+            if screen is None or screen.child is None:
+                return None
+
+            def walk(node, x, y, clip):
+                if node is self.slot:
+                    return x, y, clip
+                if isinstance(node, Viewport):
+                    clip = (max(clip[0], x), max(clip[1], y),
+                        min(clip[2], x+node.width), min(clip[3], y+node.height))
+                for child, (ox, oy) in zip(getattr(node, "children", ()),
+                        getattr(node, "offsets", ())):
+                    found = walk(child, x+ox, y+oy, clip)
+                    if found is not None:
+                        return found
+                return None
+
+            return walk(screen.child, 0, 0, (0, 0, config.screen_width, config.screen_height))
+
+        def render(self, width, height, st, at):
+            result = renpy.Render(width, height)
+            location = self.locate()
+            if location is None:
+                return result
+            child = renpy.render(self.rope, width, height, st, at)
+            x, y, (left, top, right, bottom) = location
+            w, h = child.get_size()
+            if x+w <= left or x >= right or y+h <= top or y >= bottom:
+                self.release()
+                return result
+            result.blit(child, (x, y))
+            if self.rope.active:
+                renpy.redraw(self, 1.0/60.0)
+            else:
+                # Resting text respects the viewport edge; stretched text can
+                # cross it while the card is visible.
+                clipped = renpy.Render(width, height)
+                clipped.blit(result.subsurface((left, top, right-left, bottom-top)), (left, top))
+                result = clipped
+            return result
+
+        def event(self, ev, x, y, st):
+            location = self.locate()
+            if location is None:
+                return None
+            ox, oy, (left, top, right, bottom) = location
+            w, h = self.rope.line_size
+            if ox+w <= left or ox >= right or oy+h <= top or oy >= bottom:
+                self.release()
+                return None
+            if not self.rope.active and not (left <= x < right and top <= y < bottom):
+                return None
+            try:
+                return self.rope.event(ev, x-ox, y-oy, st)
+            finally:
+                if self.rope.active:
+                    renpy.redraw(self, 0)
+
 screen lintools_demo_gallery():
-    default shatter_preview = lintools_text.ReplayableShatterText(lintools_demo_cards[-1][1], size=42, color="#ffffff")
+    default shatter_preview = lintools_text.ReplayableShatterText(lintools_demo_cards[4][1], size=42, color="#ffffff")
+    default rope_preview = LinToolsGalleryRope(lintools_demo_rope_source)
+    default gallery_scroll = ui.adjustment(changed=rope_preview.scrolled)
+    on "show" action Show("lintools_rope", rope=rope_preview)
+    on "hide" action Hide("lintools_rope")
     modal True
     add Solid("#101823")
     frame:
@@ -26,6 +135,7 @@ screen lintools_demo_gallery():
                 mousewheel True
                 draggable True
                 scrollbars "vertical"
+                yadjustment gallery_scroll
                 vbox:
                     spacing 16
                     xfill True
@@ -45,6 +155,12 @@ screen lintools_demo_gallery():
                                             yalign 0.5
                                             text_size 25
                                             action Function(shatter_preview.replay)
+                                    elif title == "06 / 弹力绳":
+                                        textbutton "复位":
+                                            xalign 1.0
+                                            yalign 0.5
+                                            text_size 25
+                                            action Function(rope_preview.reset)
                                 if title == "05 / 破碎":
                                     fixed:
                                         ysize 200
@@ -54,6 +170,11 @@ screen lintools_demo_gallery():
                                     fixed:
                                         ysize 200
                                         text sample size 42 color "#ffffff" slow_cps 0 yalign 0.5
+                                elif title == "06 / 弹力绳":
+                                    text "首尾固定，拖动中间的字，松开后回弹晃动。" size 22 color "#8ea7ae"
+                                    fixed:
+                                        ysize 240
+                                        add rope_preview.slot yalign 0.5
                                 else:
                                     text sample size 42 color "#ffffff" slow_cps 0 yminimum 76:
                                         outlines [(1, "#080e16", 0, 0)]
