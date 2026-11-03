@@ -115,7 +115,7 @@ label lintools_demo_dialogue:
 label lintools_demo_interactive:
     scene expression Solid("#101823")
     window auto
-    e "{ltshatter=hold=0;stagger=0.1;duration=1.2;pieces=4;distance=28;gravity=180}{size=40}那些未曾说出口的话，终于碎在了风里。{/size}{/ltshatter}"
+    e "{ltshatter=hold=0;stagger=0.2;duration=1.2;pieces=4;distance=28;gravity=180}{size=40}那些未曾说出口的话，终于碎在了风里。{/size}{/ltshatter}"
     e "风停了。"
     e "{ltrepel=radius=110;distance=18;response=12}{size=40}别靠这么近，我会躲开的。{/size}{/ltrepel}"
     menu:

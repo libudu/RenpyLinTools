@@ -9,7 +9,7 @@ init python in lintools_text:
 
     SHATTER = {
         "hold": (None, 0.0, 0.0, 30.0),
-        "stagger": (None, 0.09, 0.01, 3.0),
+        "stagger": (None, 0.18, 0.01, 3.0),
         "tremble": (None, 0.3, 0.0, 1.0),
         "tremble_distance": (None, 4.0, 0.0, 10.0),
         "duration": (None, 0.9, 0.05, 10.0),
